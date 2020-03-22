@@ -1,0 +1,93 @@
+service: rest-api
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: dev
+  region: ap-south-1
+  environment:
+    DYNAMODB_TABLE: "notes"
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+
+functions:
+  # Creating Notes
+  create:
+    handler: handler.create
+    events:
+      - http:
+          path: notes
+          method: post
+          cors: true
+
+  # Get one Note
+  getOne:
+    handler: handler.getOne
+    events:
+      - http:
+          path: notes/{id}
+          method: get
+          cors: true
+
+  # get all notes
+  getAll:
+    handler: handler.getAll
+    events:
+      - http:
+          path: notes
+          method: get
+          cors: true
+
+  # update note
+  update:
+    handler: handler.update
+    events:
+      - http:
+          path: notes/{id}
+          method: put
+          cors: true
+
+  # delete note
+  delete:
+    handler: handler.delete
+    events:
+      - http:
+          path: notes/{id}
+          method: delete
+          cors: true
+
+resources:
+  Resources:
+    NotesDynamoDBTable:
+      Type: "AWS::DynamoDB::Table"
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: "${self:provider.environment.DYNAMODB_TABLE}"
+
+custom:
+  dynamodb:
+    start:
+      port: 8000
+      inMemory: true
+      migrate: true
+
+plugins:
+  - serverless-dynamodb-local
+  - serverless-offline
